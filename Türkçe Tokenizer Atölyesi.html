@@ -1,0 +1,625 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Türkçe Tokenizer Atölyesi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: tek sütunlu "atölye defteri"; her görev bir tezgâh paneli, token'lar dizgi harfleri gibi bloklar */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --ink: #16202b;
+  --muted: #5a6877;
+  --line: #d3dae2;
+  --accent: #1d5f8a;
+  --accent-soft: #dcebf5;
+  --b1: #e7ebef;   /* 1 byte */
+  --b2: #f6dfb0;   /* 2 byte */
+  --b3: #cfe5cf;   /* 3 byte */
+  --b4: #f3c9cf;   /* 4 byte */
+  --t0: #d6e6f5; --t1: #f5e1c4; --t2: #d4ecdc; --t3: #efd3e4; --t4: #e2dcf5; --t5: #f2e9b8;
+  --ok: #217a45; --bad: #b3261e; --warn: #9a5b00;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171e; --panel: #19222c; --ink: #e4eaf0; --muted: #98a6b5; --line: #2c3946;
+    --accent: #7fb8e0; --accent-soft: #1d3446;
+    --b1: #26313c; --b2: #5a4419; --b3: #23452c; --b4: #5b2a32;
+    --t0: #1f3a52; --t1: #4f3a1c; --t2: #1f4630; --t3: #4a2440; --t4: #352d55; --t5: #4a4317;
+    --ok: #6fcf94; --bad: #ff8a80; --warn: #f0b85a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171e; --panel: #19222c; --ink: #e4eaf0; --muted: #98a6b5; --line: #2c3946;
+  --accent: #7fb8e0; --accent-soft: #1d3446;
+  --b1: #26313c; --b2: #5a4419; --b3: #23452c; --b4: #5b2a32;
+  --t0: #1f3a52; --t1: #4f3a1c; --t2: #1f4630; --t3: #4a2440; --t4: #352d55; --t5: #4a4317;
+  --ok: #6fcf94; --bad: #ff8a80; --warn: #f0b85a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--f-mono); font-size: 0.88em; }
+a { color: var(--accent); }
+
+header.top { display: flex; flex-direction: column; gap: 14px; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.1rem; color: var(--muted); }
+.lede b { color: var(--ink); }
+.hero-strip { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+
+nav.steps { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.steps a {
+  text-decoration: none; color: var(--ink); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 0.92rem;
+}
+nav.steps a:hover, nav.steps a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+nav.steps a span { font-family: var(--f-mono); color: var(--muted); margin-right: 6px; }
+
+section.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: clamp(18px, 3vw, 28px); display: flex; flex-direction: column; gap: 18px; min-width: 0;
+}
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.panel-head .num { font-family: var(--f-mono); color: var(--accent); font-size: 0.9rem; margin-right: 8px; }
+.time { font-family: var(--f-mono); font-size: 0.8rem; color: var(--muted); }
+
+label.fl { font-size: 0.85rem; color: var(--muted); display: block; margin-bottom: 6px; }
+textarea, input[type="text"] {
+  width: 100%; font-family: var(--f-mono); font-size: 0.95rem; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical;
+}
+textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button {
+  font-family: var(--f-body); font-size: 0.92rem; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 7px; padding: 7px 13px;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 700; }
+button.chip { font-family: var(--f-mono); font-size: 0.85rem; padding: 4px 10px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.stat .k { font-size: 0.78rem; color: var(--muted); }
+.stat .v { font-family: var(--f-mono); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+
+/* byte kutuları */
+.chars { display: flex; flex-wrap: wrap; gap: 8px; }
+.ch { border: 1px solid var(--line); border-radius: 8px; padding: 8px 8px 6px; min-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ch .glyph { font-size: 1.5rem; line-height: 1.1; min-height: 1.65rem; }
+.ch .cp { font-family: var(--f-mono); font-size: 0.68rem; color: var(--muted); }
+.ch .bytes { display: flex; gap: 2px; }
+.byte { font-family: var(--f-mono); font-size: 0.72rem; padding: 1px 4px; border-radius: 3px; }
+.n1 .byte { background: var(--b1); } .n2 .byte { background: var(--b2); }
+.n3 .byte { background: var(--b3); } .n4 .byte { background: var(--b4); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+/* token blokları */
+.tokens { font-family: var(--f-mono); font-size: 0.9rem; line-height: 2; max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--bg); }
+.tok { display: inline-block; padding: 0 3px; margin: 1px 1px; border-radius: 3px; white-space: pre; line-height: 1.5; border: 1px solid transparent; }
+.tok.c0 { background: var(--t0); } .tok.c1 { background: var(--t1); } .tok.c2 { background: var(--t2); }
+.tok.c3 { background: var(--t3); } .tok.c4 { background: var(--t4); } .tok.c5 { background: var(--t5); }
+.tok.raw { background: var(--b1); color: var(--muted); }
+.tok.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tok .id { font-size: 0.65rem; color: var(--muted); margin-left: 3px; }
+.sep { display: inline-block; width: 1px; height: 1.1em; background: var(--muted); opacity: 0.45; vertical-align: middle; margin: 0 3px; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; max-height: 320px; overflow-y: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 700; color: var(--muted); font-size: 0.78rem; position: sticky; top: 0; background: var(--panel); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--f-mono); }
+tr.top td { background: var(--accent-soft); }
+
+.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); font-size: 0.95rem; }
+.note b { color: var(--ink); }
+ul.points { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+.badge { display: inline-block; font-family: var(--f-mono); font-size: 0.8rem; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
+.badge.ok { color: var(--ok); } .badge.bad { color: var(--bad); }
+.out { font-family: var(--f-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+
+/* regex parçaları */
+.alt0 { background: var(--b4) !important; } .alt1 { background: var(--t0) !important; } .alt2 { background: var(--t5) !important; }
+.alt3 { background: var(--t3) !important; } .alt4, .alt5, .alt6 { background: var(--b1) !important; }
+.pattern { font-family: var(--f-mono); font-size: 0.8rem; overflow-x: auto; white-space: nowrap; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+
+/* çubuk grafik */
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) 52px; gap: 10px; align-items: center; font-size: 0.9rem; }
+.bar-track { height: 18px; background: var(--bg); border-radius: 4px; position: relative; border: 1px solid var(--line); }
+.bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.bar-val { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.fill-tr { background: var(--accent); } .fill-en { background: var(--muted); }
+@media (max-width: 520px) { .bar-row { grid-template-columns: minmax(0, 1fr) 52px; } .bar-row .bar-track { grid-column: 1 / -1; grid-row: 2; } }
+.words td:first-child { font-family: var(--f-mono); }
+.src { font-size: 0.8rem; color: var(--muted); }
+
+@media (prefers-reduced-motion: no-preference) { .bar-fill { transition: width 0.5s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Hafta 9 · Karpathy, "Let's build the GPT Tokenizer"</div>
+    <h1>Türkçe Tokenizer Atölyesi</h1>
+    <p class="lede">Bir dil modeli metni harf harf görmez, <b>token</b> görür. Bu sayfada bir Türkçe cümlenin önce byte'lara, sonra BPE ile token'lara nasıl dönüştüğünü adım adım deneyebilirsin. Her kutuya kendi metnini yazabilirsin.</p>
+    <div class="hero-strip" id="heroStrip" aria-hidden="true"></div>
+    <nav class="steps" aria-label="Bölümler">
+      <a href="#byte"><span>0</span>Byte'lar</a>
+      <a href="#bpe"><span>1</span>BPE eğitimi</a>
+      <a href="#encdec"><span>2</span>encode / decode</a>
+      <a href="#regex"><span>3</span>GPT-4 regex</a>
+      <a href="#karsilastir"><span>4</span>Türkçe ve İngilizce</a>
+    </nav>
+  </header>
+
+  <!-- 0. BYTE -->
+  <section class="panel" id="byte">
+    <div class="panel-head">
+      <h2><span class="num">0</span>Metni byte'lara çevir</h2>
+      <span class="time">video 0:14:56 – 0:23:50</span>
+    </div>
+    <p>Her karakterin bir Unicode <b>kod noktası</b> var (ör. <code>ş</code> = U+015F). Bilgisayar bunu <b>UTF-8</b> ile 1 ila 4 byte'a çevirir. ASCII harfleri 1 byte, Türkçeye özgü harfler 2 byte, emojiler 4 byte tutar.</p>
+    <div>
+      <label class="fl" for="byteInput">Cümle</label>
+      <input type="text" id="byteInput" value="YZ50 ekibine selamlar, çok seviliyorsunuz 🚀 :)">
+    </div>
+    <div class="row">
+      <button class="chip" data-byte="Ilık ılık esen rüzgâr">ı / I</button>
+      <button class="chip" data-byte="ÇĞİÖŞÜ çğıöşü">Türkçe harfler</button>
+      <button class="chip" data-byte="Hello world">İngilizce</button>
+      <button class="chip" data-byte="👨‍👩‍👧‍👦 €">aile emojisi ve €</button>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--b1)"></i>1 byte</span>
+      <span><i style="background:var(--b2)"></i>2 byte</span>
+      <span><i style="background:var(--b3)"></i>3 byte</span>
+      <span><i style="background:var(--b4)"></i>4 byte</span>
+    </div>
+    <div class="chars" id="chars"></div>
+    <div class="stats" id="byteStats"></div>
+    <div class="note"><b>Neden kod noktalarını doğrudan vocab yapmıyoruz?</b> Unicode'da yaklaşık 150 bin karakter var ve standart her yıl değişiyor. Bu kadar büyük bir embedding tablosunun çoğu satırı neredeyse hiç eğitilmez, diziler de hiç kısalmaz. Bunun yerine 256 değerlik sabit byte alfabesiyle başlıyor, sık geçen byte ikililerini BPE ile birleştiriyoruz.</div>
+  </section>
+
+  <!-- 1. BPE -->
+  <section class="panel" id="bpe">
+    <div class="panel-head">
+      <h2><span class="num">1</span>BPE'yi adım adım eğit</h2>
+      <span class="time">video 0:23:50 – 0:39:20</span>
+    </div>
+    <p>Algoritma tek bir döngüden ibaret: ardışık token ikililerini say, en sık geçeni yeni bir token'la değiştir, tekrarla. Her adımda vocab 1 büyür, dizi kısalır. Çerçeveli bloklar bir sonraki adımda birleşecek ikiliyi gösteriyor.</p>
+    <div>
+      <label class="fl" for="trainText">Eğitim metni</label>
+      <textarea id="trainText" rows="6">Gece iner yavaş yavaş şehrin üstüne,
+ışıklar yanar birer birer pencerelerde.
+Rüzgâr eser, yapraklar düşer sokaklara,
+ben seni düşünürüm, sen beni düşünür müsün?
+Denizler, dağlar, ovalar geçer gözlerimden;
+gönlümde bir şarkı, dilimde bir türkü.
+Sabah olur, güneş doğar, kuşlar öter,
+çocuklar koşar okullara, gülerek, şarkılarla.
+Akşamlar uzar, yollar uzar, özlemler uzar;
+bir mektup yazarım sana, satır satır, için için.</textarea>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="Parçalama">
+        <button id="modeBasic" aria-pressed="true">Basit BPE</button>
+        <button id="modeRegex" aria-pressed="false">GPT-4 regex ile</button>
+      </div>
+      <button class="primary" id="step1">1 adım</button>
+      <button id="step10">10 adım</button>
+      <button id="stepAll">Vocab 512'ye kadar</button>
+      <button id="resetBpe">Sıfırla</button>
+    </div>
+    <div class="stats" id="bpeStats"></div>
+    <div>
+      <h3 style="margin-bottom:8px">Token dizisi</h3>
+      <div class="tokens" id="bpeTokens" aria-live="polite"></div>
+    </div>
+    <div class="two">
+      <div>
+        <h3 style="margin-bottom:8px">En sık ikililer (get_stats)</h3>
+        <div class="tbl-wrap"><table><thead><tr><th>İkili</th><th class="num">id'ler</th><th class="num">Adet</th></tr></thead><tbody id="pairTable"></tbody></table></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Öğrenilen birleştirmeler (merges)</h3>
+        <div class="tbl-wrap"><table><thead><tr><th class="num">Yeni id</th><th>Birleşme</th><th class="num">Adet</th></tr></thead><tbody id="mergeTable"></tbody></table></div>
+      </div>
+    </div>
+    <div class="note">İlk adımlarda genellikle <b>Türkçe harflerin iki byte'ı</b> birleşir (<code>⟨C4⟩+⟨B1⟩ → ı</code>). Sonra <code>ar</code>, <code>ler</code>, <code>yor</code> gibi ekler gelir. Basit modda <code>e·</code>, <code>,·</code> gibi boşluk ve noktalama içeren token'lar da oluşur. "GPT-4 regex ile" moduna geçip aynı adımları tekrarlarsan bunların kaybolduğunu görürsün.</div>
+  </section>
+
+  <!-- 2. ENCODE / DECODE -->
+  <section class="panel" id="encdec">
+    <div class="panel-head">
+      <h2><span class="num">2</span>encode ve decode</h2>
+      <span class="time">video 0:42:47 – 0:57:36</span>
+    </div>
+    <p><b>encode</b> metni byte'lara çevirip yukarıda öğrenilen birleştirmeleri <b>öğrenilme sırasıyla</b> uygular. <b>decode</b> her token'ın byte'larını yan yana koyup UTF-8 olarak çözer. <code>decode(encode(metin))</code> her zaman metnin kendisini vermeli.</p>
+    <div>
+      <label class="fl" for="encInput">Metin</label>
+      <input type="text" id="encInput" value="YZ50 ekibine selamlar, çok seviliyorsunuz 🚀 :)">
+    </div>
+    <div class="stats" id="encStats"></div>
+    <div class="tokens" id="encTokens"></div>
+    <div>
+      <label class="fl">decode(encode(metin))</label>
+      <div class="out" id="decOut"></div>
+    </div>
+
+    <h3>Geçersiz UTF-8 deneyi</h3>
+    <p>Her token dizisi geçerli UTF-8 değildir. Model sıradan çıkan bir token üretebilir, örneğin bir harfin sadece ilk byte'ını. Aşağıya byte listesi yaz ya da bir örnek seç.</p>
+    <div class="row">
+      <button class="chip" data-bytes="128">[128]</button>
+      <button class="chip" data-bytes="195">[195] yarım ç</button>
+      <button class="chip" data-bytes="167,195">[167,195] ters ç</button>
+      <button class="chip" data-bytes="195,167">[195,167] doğru ç</button>
+      <button class="chip" data-bytes="240,159">emojinin ilk 2 byte'ı</button>
+    </div>
+    <input type="text" id="badBytes" value="195" aria-label="Byte listesi">
+    <div class="two">
+      <div><label class="fl">errors="strict"</label><div class="out" id="strictOut"></div></div>
+      <div><label class="fl">errors="replace"</label><div class="out" id="replaceOut"></div></div>
+    </div>
+    <div class="note"><b>decode ne yapmalı?</b> Programı çökertmek yerine bozuk byte'ları <code>&#xFFFD;</code> (U+FFFD) ile değiştirmeli. tiktoken ve Karpathy'nin minbpe'si de <code>errors="replace"</code> kullanır. Bilgi kaybolmaz: aynı byte'lar doğru sırayla gelince yine geçerli bir harfe dönüşür.</div>
+  </section>
+
+  <!-- 3. REGEX -->
+  <section class="panel" id="regex">
+    <div class="panel-head">
+      <h2><span class="num">3</span>GPT-4'ün regex deseni</h2>
+      <span class="time">video 0:57:36 – 1:11:38</span>
+    </div>
+    <p>GPT-4, BPE'den önce metni bu desenle parçalara böler. Birleştirmeler parça sınırını aşamaz, böylece <code>"e "</code> ya da <code>"a,"</code> gibi kelime ile noktalamayı karıştıran token'lar oluşmaz.</p>
+    <div class="pattern" id="patternText"></div>
+    <div>
+      <label class="fl" for="rxInput">Metin</label>
+      <input type="text" id="rxInput" value="Ayşe'yle İstanbul'dan Ankara'ya 2024'te gittik; Kızılay'da 1250 TL'lik çay içtik!!">
+    </div>
+    <div class="row" id="rxExamples"></div>
+    <div class="tokens" id="rxTokens" style="max-height:none"></div>
+    <div class="legend" id="rxLegend"></div>
+    <div class="note">Desenin ilk kuralı İngilizce kısaltmalar için yazılmış (<code>it's, I'd, I'm, don't, we'll, I've, you're</code>). Türkçede kesme işaretinden sonraki ek <b>d, t, s, m</b> ile başlıyorsa bu kural devreye giriyor ve eki ortadan bölüyor: <code>Ankara'dan → Ankara | 'd | an</code>. Ek başka harfle başlıyorsa (<code>'ya</code>, <code>'nin</code>, <code>'le</code>) tek parça kalıyor. Aynı türden ekler ilk harflerine göre farklı bölünüyor.</div>
+  </section>
+
+  <!-- 4. KARŞILAŞTIRMA -->
+  <section class="panel" id="karsilastir">
+    <div class="panel-head">
+      <h2><span class="num">4</span>Türkçe ile İngilizceyi karşılaştır</h2>
+      <span class="time">tiktoken · cl100k_base</span>
+    </div>
+    <p>Aynı paragrafın Türkçesi ve İngilizcesi, kelime başına kaç token tutuyor? Türkçe eklemeli bir dil: <code>okuduklarını</code> tek kelime ama <i>oku-duk-lar-ı-nı</i> diye beş parçadan oluşuyor. İngilizcenin birkaç kelimeyle söylediğini Türkçe tek kelimede söylüyor.</p>
+    <div class="stats">
+      <div class="stat"><div class="k">Türkçe paragraf</div><div class="v">40 kelime</div></div>
+      <div class="stat"><div class="k">İngilizce paragraf</div><div class="v">60 kelime</div></div>
+      <div class="stat"><div class="k">GPT-4 token (TR / EN)</div><div class="v">141 / 66</div></div>
+      <div class="stat"><div class="k">TR, EN'den kaç kat fazla</div><div class="v">2.14×</div></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:10px">Kelime başına token</h3>
+      <div class="bars" id="bars"></div>
+      <p class="src" style="margin-top:8px">Kaynak: <code>gorev4_karsilastirma.py</code> çıktısı. Kendi tokenizer'larımız Turkish-Poems-19K şiirlerinin ilk 200 bin karakteriyle, 512'lik vocab ile eğitildi.</p>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">Kelime kelime parçalanma</h3>
+      <div class="tbl-wrap" style="max-height:none">
+        <table class="words"><thead><tr><th>Kelime</th><th>GPT-4 (cl100k_base, ~100 bin token)</th><th>Bizim regex BPE (512 token)</th></tr></thead><tbody id="wordTable"></tbody></table>
+      </div>
+    </div>
+    <ul class="points">
+      <li>GPT-4'ün vocab'ı çoğunlukla İngilizce ve kod üzerinde öğrenildi: <code>books</code> ve <code>librarian</code> tek token, Türkçe ekli kelimeler 3–6 parça.</li>
+      <li>Aynı anlam için Türkçede yaklaşık iki kat token harcanıyor. Bu da API ücretinin artması ve bağlam penceresine daha az metin sığması demek.</li>
+      <li>Bizim tokenizer'ın vocab'ı sadece 512 olduğu için toplamda daha çok token üretiyor. Ama Türkçe metinde eğitildiği için <code>lar</code>, <code>ların</code>, <code>iyor</code>, <code>leri</code> gibi ekleri yakalıyor. İngilizcede ise <code>librarian</code>'ı 7 parçaya bölüyor.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(() => {
+  const enc = new TextEncoder();
+  const decStrict = new TextDecoder("utf-8", { fatal: true });
+  const decReplace = new TextDecoder("utf-8");
+  const $ = (id) => document.getElementById(id);
+  const hex = (b) => b.toString(16).toUpperCase().padStart(2, "0");
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const visible = (s) => s.replace(/ /g, "·").replace(/\n/g, "↵").replace(/\t/g, "→");
+
+  function tokenLabel(bytes) {
+    try { return visible(decStrict.decode(bytes)); }
+    catch { return Array.from(bytes, (b) => "⟨" + hex(b) + "⟩").join(""); }
+  }
+
+  // ---------------- GPT-4 deseni (JS'de possessive niceleyici yok, eşdeğer hali)
+  const ALTS = [
+    { re: String.raw`'(?:[sdmtSDMT]|[lL][lL]|[vV][eE]|[rR][eE])`, ad: "İngilizce kısaltma: 's 'd 'm 't 'll 've 're" },
+    { re: String.raw`[^\r\n\p{L}\p{N}]?\p{L}+`, ad: "Harf dizisi (önünde en fazla 1 boşluk/işaret)" },
+    { re: String.raw`\p{N}{1,3}`, ad: "1–3 haneli sayı" },
+    { re: String.raw` ?[^\s\p{L}\p{N}]+[\r\n]*`, ad: "Noktalama" },
+    { re: String.raw`\s*[\r\n]`, ad: "Satır sonu" },
+    { re: String.raw`\s+(?!\S)`, ad: "Boşluk" },
+    { re: String.raw`\s+`, ad: "Boşluk" },
+  ];
+  const GPT4_RE = new RegExp(ALTS.map((a) => a.re).join("|"), "gu");
+  const ALT_FULL = ALTS.map((a) => new RegExp("^(?:" + a.re + ")$", "u"));
+  const splitGPT4 = (t) => t.match(GPT4_RE) || [];
+  const whichAlt = (chunk) => ALT_FULL.findIndex((r) => r.test(chunk));
+
+  // ---------------- BPE çekirdeği (Python'daki get_stats / merge ile aynı)
+  function getStats(ids, counts) {
+    for (let i = 0; i < ids.length - 1; i++) {
+      const k = ids[i] + "," + ids[i + 1];
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+    return counts;
+  }
+  function merge(ids, a, b, idx) {
+    const out = [];
+    for (let i = 0; i < ids.length; i++) {
+      if (i < ids.length - 1 && ids[i] === a && ids[i + 1] === b) { out.push(idx); i++; }
+      else out.push(ids[i]);
+    }
+    return out;
+  }
+
+  // ---------------- 0. Byte
+  function renderBytes() {
+    const text = $("byteInput").value;
+    const chars = Array.from(text);
+    const groups = { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() };
+    $("chars").innerHTML = chars.map((ch) => {
+      const b = enc.encode(ch);
+      if (ch.trim()) groups[b.length].add(ch);
+      const cp = "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
+      return `<div class="ch n${b.length}"><div class="glyph">${ch === " " ? "·" : esc(ch)}</div><div class="cp">${cp}</div><div class="bytes">${Array.from(b, (x) => `<span class="byte">${hex(x)}</span>`).join("")}</div></div>`;
+    }).join("");
+    const nb = enc.encode(text).length;
+    const list = (s) => (s.size ? Array.from(s).join(" ") : "—");
+    $("byteStats").innerHTML = `
+      <div class="stat"><div class="k">Karakter (kod noktası)</div><div class="v">${chars.length}</div></div>
+      <div class="stat"><div class="k">UTF-8 byte</div><div class="v">${nb}</div></div>
+      <div class="stat"><div class="k">byte / karakter</div><div class="v">${chars.length ? (nb / chars.length).toFixed(2) : "0"}</div></div>
+      <div class="stat"><div class="k">2 byte tutanlar</div><div class="v" style="font-size:1rem">${esc(list(groups[2]))}</div></div>
+      <div class="stat"><div class="k">3–4 byte tutanlar</div><div class="v" style="font-size:1rem">${esc(list(new Set([...groups[3], ...groups[4]])))}</div></div>`;
+  }
+  $("byteInput").addEventListener("input", renderBytes);
+  document.querySelectorAll("[data-byte]").forEach((b) => b.addEventListener("click", () => { $("byteInput").value = b.dataset.byte; renderBytes(); }));
+
+  // ---------------- 1. BPE
+  const bpe = { mode: "basic", chunks: [], merges: [], vocab: [], nBytes: 0, done: false };
+
+  function resetBpe() {
+    const text = $("trainText").value;
+    const parts = bpe.mode === "regex" ? splitGPT4(text) : [text];
+    bpe.chunks = parts.map((p) => Array.from(enc.encode(p)));
+    bpe.nBytes = enc.encode(text).length;
+    bpe.merges = [];
+    bpe.vocab = Array.from({ length: 256 }, (_, i) => new Uint8Array([i]));
+    bpe.done = false;
+    renderBpe();
+    renderEnc();
+  }
+  function allStats() {
+    const counts = new Map();
+    for (const ids of bpe.chunks) getStats(ids, counts);
+    return counts;
+  }
+  function topPair(counts) {
+    let best = null, bc = 0;
+    for (const [k, c] of counts) if (c > bc) { best = k; bc = c; }  // eşitlikte ilk görülen (Python max gibi)
+    return best ? { a: +best.split(",")[0], b: +best.split(",")[1], count: bc } : null;
+  }
+  function stepBpe(n) {
+    for (let s = 0; s < n; s++) {
+      if (bpe.vocab.length >= 512) { bpe.done = true; break; }
+      const p = topPair(allStats());
+      if (!p || p.count < 2) { bpe.done = true; break; }
+      const idx = bpe.vocab.length;
+      bpe.chunks = bpe.chunks.map((ids) => merge(ids, p.a, p.b, idx));
+      const v = new Uint8Array(bpe.vocab[p.a].length + bpe.vocab[p.b].length);
+      v.set(bpe.vocab[p.a]); v.set(bpe.vocab[p.b], bpe.vocab[p.a].length);
+      bpe.vocab.push(v);
+      bpe.merges.push({ a: p.a, b: p.b, idx, count: p.count });
+    }
+    renderBpe();
+    renderEnc();
+  }
+  function tokHtml(id, vocab, extra = "") {
+    const cls = id < 256 ? "raw" : "c" + (id % 6);
+    return `<span class="tok ${cls} ${extra}" title="id ${id}">${esc(tokenLabel(vocab[id]))}</span>`;
+  }
+  function crossesBoundary(bytes) {
+    const s = decReplace.decode(bytes);
+    return /\p{L}[\s\p{P}]|\n/u.test(s);
+  }
+  function renderBpe() {
+    const counts = allStats();
+    const next = topPair(counts);
+    const LIMIT = 900;
+    let html = "", shown = 0, total = 0;
+    for (const ids of bpe.chunks) total += ids.length;
+    outer: for (let c = 0; c < bpe.chunks.length; c++) {
+      const ids = bpe.chunks[c];
+      for (let i = 0; i < ids.length; i++) {
+        if (shown >= LIMIT) break outer;
+        let mark = "";
+        if (next && next.count >= 2 && !bpe.done) {
+          if (i < ids.length - 1 && ids[i] === next.a && ids[i + 1] === next.b) mark = "next";
+          else if (i > 0 && ids[i - 1] === next.a && ids[i] === next.b && !(i > 1 && ids[i - 2] === next.a && ids[i - 1] === next.b)) mark = "next";
+        }
+        html += tokHtml(ids[i], bpe.vocab, mark);
+        shown++;
+      }
+      if (bpe.mode === "regex" && c < bpe.chunks.length - 1) html += '<span class="sep"></span>';
+    }
+    if (total > LIMIT) html += `<span class="src"> … +${total - LIMIT} token daha</span>`;
+    $("bpeTokens").innerHTML = html;
+
+    const crossing = bpe.merges.filter((m) => crossesBoundary(bpe.vocab[m.idx])).length;
+    $("bpeStats").innerHTML = `
+      <div class="stat"><div class="k">Vocab boyutu</div><div class="v">${bpe.vocab.length}</div></div>
+      <div class="stat"><div class="k">Byte sayısı</div><div class="v">${bpe.nBytes}</div></div>
+      <div class="stat"><div class="k">Token sayısı</div><div class="v">${total}</div></div>
+      <div class="stat"><div class="k">Sıkıştırma (byte/token)</div><div class="v">${total ? (bpe.nBytes / total).toFixed(2) : "0"}×</div></div>
+      <div class="stat"><div class="k">Kelime sınırını aşan token</div><div class="v">${crossing}</div></div>`;
+
+    const sorted = Array.from(counts).sort((x, y) => y[1] - x[1]).slice(0, 12);
+    $("pairTable").innerHTML = sorted.map(([k, c], i) => {
+      const [a, b] = k.split(",").map(Number);
+      return `<tr class="${i === 0 && !bpe.done ? "top" : ""}"><td>${tokHtml(a, bpe.vocab)} + ${tokHtml(b, bpe.vocab)}</td><td class="num">${a}, ${b}</td><td class="num">${c}</td></tr>`;
+    }).join("") || `<tr><td colspan="3">Metin boş.</td></tr>`;
+
+    $("mergeTable").innerHTML = bpe.merges.length
+      ? bpe.merges.slice().reverse().map((m) => `<tr><td class="num">${m.idx}</td><td>${tokHtml(m.a, bpe.vocab)} + ${tokHtml(m.b, bpe.vocab)} → ${tokHtml(m.idx, bpe.vocab)}</td><td class="num">${m.count}</td></tr>`).join("")
+      : `<tr><td colspan="3" class="src">Henüz birleştirme yok. "1 adım" ile başla.</td></tr>`;
+
+    const btns = ["step1", "step10", "stepAll"];
+    btns.forEach((b) => ($(b).disabled = bpe.done));
+  }
+  function setMode(m) {
+    bpe.mode = m;
+    $("modeBasic").setAttribute("aria-pressed", m === "basic");
+    $("modeRegex").setAttribute("aria-pressed", m === "regex");
+    const n = bpe.merges.length;
+    resetBpe();
+    if (n) stepBpe(n);  // aynı adım sayısıyla karşılaştırmak için
+  }
+  $("step1").addEventListener("click", () => stepBpe(1));
+  $("step10").addEventListener("click", () => stepBpe(10));
+  $("stepAll").addEventListener("click", () => stepBpe(512));
+  $("resetBpe").addEventListener("click", resetBpe);
+  $("modeBasic").addEventListener("click", () => setMode("basic"));
+  $("modeRegex").addEventListener("click", () => setMode("regex"));
+  let trainTimer;
+  $("trainText").addEventListener("input", () => { clearTimeout(trainTimer); trainTimer = setTimeout(resetBpe, 300); });
+
+  // ---------------- 2. encode / decode
+  function encodeChunk(ids, rank) {
+    while (ids.length >= 2) {
+      let best = null, bestIdx = Infinity;
+      for (let i = 0; i < ids.length - 1; i++) {
+        const r = rank.get(ids[i] + "," + ids[i + 1]);
+        if (r !== undefined && r < bestIdx) { bestIdx = r; best = [ids[i], ids[i + 1]]; }
+      }
+      if (!best) break;
+      ids = merge(ids, best[0], best[1], bestIdx);
+    }
+    return ids;
+  }
+  function encodeText(text) {
+    const rank = new Map(bpe.merges.map((m) => [m.a + "," + m.b, m.idx]));
+    const parts = bpe.mode === "regex" ? splitGPT4(text) : [text];
+    return parts.flatMap((p) => encodeChunk(Array.from(enc.encode(p)), rank));
+  }
+  function decodeIds(ids) {
+    const bytes = ids.flatMap((i) => Array.from(bpe.vocab[i]));
+    return decReplace.decode(new Uint8Array(bytes));
+  }
+  function renderEnc() {
+    const text = $("encInput").value;
+    const ids = encodeText(text);
+    const back = decodeIds(ids);
+    const nb = enc.encode(text).length;
+    $("encTokens").innerHTML = ids.map((i) => tokHtml(i, bpe.vocab)).join("") || '<span class="src">Metin boş.</span>';
+    $("decOut").textContent = back;
+    $("encStats").innerHTML = `
+      <div class="stat"><div class="k">Byte</div><div class="v">${nb}</div></div>
+      <div class="stat"><div class="k">Token</div><div class="v">${ids.length}</div></div>
+      <div class="stat"><div class="k">Kullanılan merges</div><div class="v">${bpe.merges.length}</div></div>
+      <div class="stat"><div class="k">decode(encode(x)) == x</div><div class="v">${back === text ? '<span class="badge ok">True</span>' : '<span class="badge bad">False</span>'}</div></div>`;
+  }
+  $("encInput").addEventListener("input", renderEnc);
+
+  function renderBad() {
+    const nums = $("badBytes").value.split(/[\s,]+/).filter(Boolean).map(Number);
+    if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
+      $("strictOut").textContent = "0 ile 255 arasında, virgülle ayrılmış sayılar yaz.";
+      $("replaceOut").textContent = "";
+      return;
+    }
+    const u8 = new Uint8Array(nums);
+    try { $("strictOut").textContent = JSON.stringify(decStrict.decode(u8)) + "  (geçerli UTF-8)"; $("strictOut").style.color = "var(--ok)"; }
+    catch { $("strictOut").textContent = "UnicodeDecodeError: geçersiz UTF-8"; $("strictOut").style.color = "var(--bad)"; }
+    $("replaceOut").textContent = JSON.stringify(decReplace.decode(u8));
+  }
+  $("badBytes").addEventListener("input", renderBad);
+  document.querySelectorAll("[data-bytes]").forEach((b) => b.addEventListener("click", () => { $("badBytes").value = b.dataset.bytes; renderBad(); }));
+
+  // ---------------- 3. regex
+  $("patternText").textContent = String.raw`'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+`;
+  const RX_EX = ["Ankara'dan", "İstanbul'da", "Türkiye'nin", "Ankara'ya", "Ahmet'te", "Mehmet'le", "Antalya'm", "Kadıköy'deki", "2024'te", "I'm sure it's what we've done"];
+  $("rxExamples").innerHTML = RX_EX.map((w) => `<button class="chip" data-rx="${esc(w)}">${esc(w)}</button>`).join("");
+  document.querySelectorAll("[data-rx]").forEach((b) => b.addEventListener("click", () => { $("rxInput").value = b.dataset.rx; renderRx(); }));
+  const LEGEND = [[0, "İngilizce kısaltma kuralı ('d 't 's 'm …)"], [1, "Harf dizisi"], [2, "Sayı (en fazla 3 hane)"], [3, "Noktalama"], [6, "Boşluk / satır sonu"]];
+  $("rxLegend").innerHTML = LEGEND.map(([i, t]) => `<span><i class="alt${i}"></i>${t}</span>`).join("");
+  function renderRx() {
+    const parts = splitGPT4($("rxInput").value);
+    $("rxTokens").innerHTML = parts.map((p) => {
+      const a = whichAlt(p);
+      return `<span class="tok alt${a}" title="${esc(ALTS[a] ? ALTS[a].ad : "")}">${esc(visible(p))}</span>`;
+    }).join("") || '<span class="src">Metin boş.</span>';
+  }
+  $("rxInput").addEventListener("input", renderRx);
+
+  // ---------------- 4. karşılaştırma (gorev4 çıktısı)
+  const BARS = [
+    ["GPT-4 · Türkçe", 3.52, "tr"], ["GPT-4 · İngilizce", 1.10, "en"],
+    ["Bizim basit BPE · Türkçe", 4.80, "tr"], ["Bizim regex BPE · Türkçe", 4.55, "tr"], ["Bizim regex BPE · İngilizce", 3.87, "en"],
+  ];
+  const maxV = 5;
+  $("bars").innerHTML = BARS.map(([n, v, k]) => `<div class="bar-row"><span>${n}</span><div class="bar-track"><div class="bar-fill fill-${k}" style="width:${(v / maxV) * 100}%"></div></div><span class="bar-val">${v.toFixed(2)}</span></div>`).join("");
+  const WORDS = [
+    ["kitaplar", [" kit", "ap", "lar"], [" k", "it", "ap", "lar"]],
+    ["kitaplarımızdan", [" kit", "ap", "lar", "ım", "ız", "dan"], [" k", "it", "ap", "larım", "ız", "dan"]],
+    ["okuduklarını", [" ok", "ud", "uk", "lar", "ını"], [" o", "k", "u", "d", "uk", "ların", "ı"]],
+    ["tartışabilecekleri", [" tart", "ış", "abile", "cek", "leri"], [" t", "ar", "t", "ış", "ab", "il", "ec", "ek", "leri"]],
+    ["öğreniyorlar", [" ö", "ğ", "ren", "iyor", "lar"], [" ö", "ğ", "r", "en", "iyor", "lar"]],
+    ["books", [" books"], [" bo", "ok", "s"]],
+    ["librarian", [" librarian"], [" ", "li", "b", "r", "ar", "i", "an"]],
+  ];
+  const chips = (arr) => arr.map((t, i) => `<span class="tok c${i % 6}">${esc(visible(t))}</span>`).join("") + ` <span class="src">${arr.length}</span>`;
+  $("wordTable").innerHTML = WORDS.map(([w, g, o]) => `<tr><td>${w}</td><td>${chips(g)}</td><td>${chips(o)}</td></tr>`).join("");
+
+  // ---------------- hero şeridi: başlık cümlesinin byte'ları
+  $("heroStrip").innerHTML = Array.from("Türkçe token", (ch) => {
+    const b = enc.encode(ch);
+    return Array.from(b, (x) => `<span class="ch n${b.length}" style="min-width:0;padding:2px 4px"><span class="byte">${hex(x)}</span></span>`).join("");
+  }).join("");
+
+  // ---------------- başlangıç durumu: 12 adım eğitilmiş olarak aç
+  renderBytes();
+  resetBpe();
+  stepBpe(12);
+  renderBad();
+  renderRx();
+})();
+</script>
+
+</body></html>

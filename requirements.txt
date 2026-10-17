@@ -1,0 +1,5 @@
+tiktoken
+regex
+pandas
+pyarrow
+huggingface_hub
