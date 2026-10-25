@@ -1,0 +1,273 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hafta 10 GPT-2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: tek sütun, görev başına bir bölüm; her bölümde etkileşimli görsel + "videoda" soru kutusu */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --fg:#141b2b; --muted:#5b6478; --line:#dde2ec;
+  --accent:#3451d1; --accent-soft:#e6eaff; --tr:#c2570c; --tr-soft:#fdeedd; --ok:#1d8a5b;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1420; --surface:#171e2d; --fg:#e7ebf3; --muted:#9aa4b8; --line:#2a3346;
+  --accent:#8fa2ff; --accent-soft:#232c4d; --tr:#f39a55; --tr-soft:#3a2716; --ok:#4fc792; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1420; --surface:#171e2d; --fg:#e7ebf3; --muted:#9aa4b8; --line:#2a3346;
+  --accent:#8fa2ff; --accent-soft:#232c4d; --tr:#f39a55; --tr-soft:#3a2716; --ok:#4fc792; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:880px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:40px}
+header h1{font:800 clamp(2rem,6vw,3.2rem)/1.05 var(--display);margin:0;text-wrap:balance}
+header p{color:var(--muted);margin:.5rem 0 0}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+nav a{font:600 .85rem var(--mono);color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
+nav a:hover,nav a:focus-visible{background:var(--accent-soft);outline:none}
+section{display:flex;flex-direction:column;gap:16px}
+.eyebrow{font:600 .75rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h2{font:700 1.6rem/1.2 var(--display);margin:0;text-wrap:balance}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+.big{font:800 2.2rem/1 var(--display)}
+.muted{color:var(--muted)}
+.ask{border-left:3px solid var(--accent);padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:6px}
+.ask b{font:600 .75rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ask ol{margin:0;padding-left:1.2em}
+/* param bar */
+.bar{display:flex;height:44px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.bar button{border:0;cursor:pointer;color:#fff;font:600 .75rem var(--mono);padding:0;min-width:0;overflow:hidden;white-space:nowrap}
+.bar button:focus-visible{outline:3px solid var(--fg);outline-offset:-3px}
+.legend{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
+/* diagram */
+.flow{display:flex;flex-direction:column;align-items:center;gap:6px}
+.node{font:600 .9rem var(--mono);border:1.5px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 14px;cursor:pointer;min-width:220px;text-align:center}
+.node.hot{border-color:var(--accent);background:var(--accent-soft)}
+.node[aria-pressed="true"]{outline:2px solid var(--accent)}
+.arrow{color:var(--muted);font:.8rem var(--mono)}
+.block{border:1.5px dashed var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.block .tag{font:.75rem var(--mono);color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}.node{min-width:0;width:100%}}
+pre{margin:0;font:.82rem/1.5 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;white-space:pre}
+.hint{font-size:.85rem;color:var(--muted)}
+/* shapes */
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font:.85rem var(--mono)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+td.flip{color:var(--accent);font-weight:600}
+.btn{font:600 .85rem var(--mono);border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn[aria-pressed="true"],.btn:hover{background:var(--accent);color:var(--surface)}
+.btn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+/* tokens */
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:.9rem var(--mono);padding:3px 6px;border-radius:5px;background:var(--accent-soft);color:var(--fg);white-space:pre}
+.chips.tr .chip{background:var(--tr-soft)}
+.chip.byte{outline:1.5px solid var(--tr)}
+.chip.sp::before{content:"·";color:var(--muted)}
+.count{display:flex;align-items:baseline;gap:8px}
+.meter{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%}
+.sample{font-size:.92rem;border-left:2px solid var(--line);padding-left:12px}
+.sample .who{font:600 .75rem var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+/* chart */
+svg text{fill:var(--muted);font:11px var(--mono)}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stats{display:flex;flex-wrap:wrap;gap:28px}
+@media (prefers-reduced-motion:no-preference){.bar button,.meter i{transition:flex .3s,width .4s}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">YZ50 · Hafta 10</div>
+  <h1>GPT-2'yi açmak, yazmak, konuşturmak</h1>
+  <nav><a href="#g1">1 · İncele</a><a href="#g2">2 · Yaz</a><a href="#g3">3 · Konuştur</a><a href="#g4">4 · Eğit</a></nav>
+</header>
+
+<!-- GÖREV 1 -->
+<section id="g1">
+  <div class="eyebrow">Görev 1</div>
+  <h2>124.439.808 parametre nereye gidiyor?</h2>
+  <div class="panel">
+    <div class="bar" id="pbar"></div>
+    <div class="legend">
+      <div><div class="mono" id="pname">Toplam</div><div class="hint" id="pdesc">124.439.808</div></div>
+      <div style="text-align:right"><div class="big num" id="pval">124,4M</div><div class="hint num" id="ppct">%100</div></div>
+    </div>
+  </div>
+  <div class="panel row" style="justify-content:space-between">
+    <span class="mono">lm_head.weight</span>
+    <span class="hint">named_parameters() listesinde yok</span>
+  </div>
+  <div class="ask"><b>Sorular</b><ol>
+    <li>Toplam neden 124M, 163M değil?</li>
+    <li>wpe grafiğinde ne görüyorsun, bu yapıyı kim belirledi?</li>
+  </ol></div>
+</section>
+
+<!-- GÖREV 2 -->
+<section id="g2">
+  <div class="eyebrow">Görev 2</div>
+  <h2>Senin GPT-2'n, Hugging Face ile aynı</h2>
+  <div class="panel stats">
+    <div class="stat"><span class="hint">en büyük logits farkı</span><span class="big num mono" style="font-size:1.8rem">7.63e-5</span></div>
+    <div class="stat"><span class="hint">torch.allclose</span><span class="big" style="color:var(--ok);font-size:1.8rem">True</span></div>
+    <div class="stat"><span class="hint">logits şekli</span><span class="big num mono" style="font-size:1.8rem">1×5×50257</span></div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="flow" id="flow"></div>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <div class="mono" id="cname">ln_1 → attn</div>
+      <pre id="ccode"></pre>
+    </div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="row" style="justify-content:space-between">
+      <span class="mono">Ağırlık şekilleri (blok 11)</span>
+      <button class="btn" id="tbtn" aria-pressed="false">.T uygula</button>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>katman</th><th>HF (Conv1D)</th><th>benim modelim (nn.Linear)</th><th></th></tr></thead>
+      <tbody id="shapes"></tbody>
+    </table></div>
+  </div>
+  <div class="ask"><b>Sorular</b><ol>
+    <li>Vurgulu kutular Hafta 8'deki GPT'den nasıl farklı?</li>
+    <li>Bazı ağırlıklar neden transpoze ediliyor? attn.c_proj neden değişmiyor gibi görünüyor?</li>
+    <li>7.63e-5 fark neden "aynı" sayılır?</li>
+  </ol></div>
+</section>
+
+<!-- GÖREV 3 -->
+<section id="g3">
+  <div class="eyebrow">Görev 3</div>
+  <h2>Aynı anlam, 27'ye karşı 11 token</h2>
+  <div class="panel" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="count"><span class="big num" style="color:var(--tr)">27</span><span class="muted">Türkçe · Yapay zekâ gelecekte hayatımızı değiştirecek.</span></div>
+      <div class="meter"><i id="mtr" style="width:0;background:var(--tr)"></i></div>
+      <div class="chips tr" id="trchips"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="count"><span class="big num" style="color:var(--accent)">11</span><span class="muted">İngilizce · Artificial intelligence will change our lives in the future.</span></div>
+      <div class="meter"><i id="men" style="width:0;background:var(--accent)"></i></div>
+      <div class="chips" id="enchips"></div>
+    </div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column;gap:14px">
+    <div class="mono">Prompt: Artificial intelligence will change the world because…</div>
+    <div class="sample"><div class="who">HF model</div>…of the work of humans on its own. The "smart-phone", which is just a standard computer, will have a huge impact on all parts of its life cycle…</div>
+    <div class="sample"><div class="who">Benim modelim</div>…of it," said H. David Zumman, one of the authors of a paper describing the research, published Sunday in the journal Proceedings of the National Academy of Sciences.</div>
+    <div class="sample" style="border-color:var(--tr)"><div class="who">HF model · Türkçe prompt</div>Yapay zekânın gelecekte insanlara sağlayacağı en büyük faydağı yamıyınyır albınıl vejçte kulat metirın aynnım al büyıy u</div>
+  </div>
+  <div class="ask"><b>Sorular</b><ol>
+    <li>27–11 farkı nereden geliyor?</li>
+    <li>GPT-2'nin Türkçe çıktısı neden kötü? Geçen haftaki tokenizer sonuçlarıyla bağlantısı ne?</li>
+    <li>Kendi modelinin akıcı konuşması neyi kanıtlıyor?</li>
+  </ol></div>
+</section>
+
+<!-- GÖREV 4 -->
+<section id="g4">
+  <div class="eyebrow">Görev 4</div>
+  <h2>Rastgele başlangıçtan ezberlemeye</h2>
+  <div class="panel stats">
+    <div class="stat"><span class="hint">ilk loss</span><span class="big num mono" style="font-size:1.8rem">10.826</span></div>
+    <div class="stat"><span class="hint">ln(50257)</span><span class="big num mono" style="font-size:1.8rem">10.825</span></div>
+    <div class="stat"><span class="hint">300 adım sonra (eval)</span><span class="big num mono" style="font-size:1.8rem">0.0026</span></div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+    <div class="row" style="justify-content:space-between">
+      <span class="mono">Tek batch loss (log ölçek)</span>
+      <div class="row">
+        <button class="btn" id="b1" aria-pressed="true">init ile</button>
+        <button class="btn" id="b2" aria-pressed="false">init olmadan</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto"><svg id="chart" viewBox="0 0 640 260" width="100%" role="img" aria-label="Loss eğrisi"></svg></div>
+    <p class="hint" id="cnote" style="margin:0"></p>
+  </div>
+  <div class="ask"><b>Sorular</b><ol>
+    <li>İlk loss neden ln(50257)'ye yakın çıkmalı?</li>
+    <li>Tek batch'i ezberletmek neyi test ediyor?</li>
+    <li>init olmadan ilk loss neden 408 çıktı?</li>
+  </ol></div>
+</section>
+</div>
+
+<script>
+// ---------- Görev 1
+const P=[
+ {n:"wte · token embedding",v:38597376,c:"var(--accent)",d:"50257 × 768"},
+ {n:"wpe · pozisyon embedding",v:786432,c:"var(--tr)",d:"1024 × 768"},
+ {n:"12 transformer bloğu",v:85054464,c:"#6b7a99",d:"blok başına 7.087.872"},
+ {n:"ln_f",v:1536,c:"var(--ok)",d:"768 + 768"}];
+const T=124439808,bar=document.getElementById('pbar');
+const fmt=n=>n>=1e6?(n/1e6).toFixed(1).replace('.',',')+'M':n>=1e3?(n/1e3).toFixed(1).replace('.',',')+'K':n;
+P.forEach(p=>{const b=document.createElement('button');b.style.flex=Math.max(p.v/T,0.012);b.style.background=p.c;
+ b.textContent=p.v/T>.1?p.n.split(' · ')[0]:'';b.setAttribute('aria-label',p.n);
+ b.onclick=()=>{pname.textContent=p.n;pdesc.textContent=p.d+' = '+p.v.toLocaleString('tr-TR');pval.textContent=fmt(p.v);ppct.textContent='%'+(p.v/T*100).toFixed(2).replace('.',',')};
+ bar.appendChild(b)});
+
+// ---------- Görev 2
+const N=[
+ {k:"emb",l:"wte + wpe",hot:0,code:"x = self.drop(self.wte(input_ids) + self.wpe(positions))",q:"Pozisyon bilgisi nasıl ekleniyor, kaç pozisyona kadar?"},
+ {k:"ln1",l:"ln_1",hot:1,code:"x = x + self.attn(self.ln_1(x))",q:"LayerNorm attention'dan önce mi sonra mı? Hafta 8'de nasıldı?"},
+ {k:"attn",l:"c_attn → q, k, v",hot:1,code:"self.c_attn = nn.Linear(n_embd, 3 * n_embd)\nq, k, v = self.c_attn(x).split(emb, dim=2)",q:"q, k, v kaç katmanla hesaplanıyor?"},
+ {k:"ln2",l:"ln_2",hot:1,code:"x = x + self.mlp(self.ln_2(x))",q:"Residual bağlantı LayerNorm'un neresinde?"},
+ {k:"mlp",l:"c_fc → GELU → c_proj",hot:1,code:"F.gelu(self.c_fc(x), approximate=\"tanh\")",q:"Aktivasyon fonksiyonu ne, Hafta 8'de ne kullanmıştın?"},
+ {k:"lnf",l:"ln_f",hot:1,code:"x = self.ln_f(x)",q:"Bloklardan sonra neden bir LayerNorm daha var?"},
+ {k:"head",l:"logits = x · wteᵀ",hot:1,code:"logits = F.linear(x, self.wte.weight)",q:"Ayrı bir lm_head neden yok? Görev 1'deki eksik satırla bağla."}];
+const flow=document.getElementById('flow');
+function nodeEl(n){const b=document.createElement('button');b.className='node'+(n.hot?' hot':'');b.textContent=n.l;b.setAttribute('aria-pressed','false');
+ b.onclick=()=>{flow.querySelectorAll('.node').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');
+ cname.textContent=n.l;ccode.textContent=n.code};return b}
+const arr=()=>{const a=document.createElement('div');a.className='arrow';a.textContent='↓';return a};
+flow.appendChild(nodeEl(N[0]));flow.appendChild(arr());
+const blk=document.createElement('div');blk.className='block';const tg=document.createElement('div');tg.className='tag';tg.textContent='× 12 blok';blk.appendChild(tg);
+N.slice(1,5).forEach((n,i)=>{if(i)blk.appendChild(arr());blk.appendChild(nodeEl(n))});
+flow.appendChild(blk);flow.appendChild(arr());flow.appendChild(nodeEl(N[5]));flow.appendChild(arr());flow.appendChild(nodeEl(N[6]));
+flow.querySelectorAll('.node')[1].click();
+
+const S=[["c_attn",[768,2304]],["attn.c_proj",[768,768]],["mlp.c_fc",[768,3072]],["mlp.c_proj",[3072,768]]];
+function shapes(t){shapesEl.innerHTML=S.map(([n,s])=>{const m=[s[1],s[0]];const hf=t?m:s;const ok=hf[0]===m[0]&&hf[1]===m[1];
+ return `<tr><td>${n}</td><td class="${t?'flip':''}">(${hf.join(', ')})</td><td>(${m.join(', ')})</td><td style="color:${ok?'var(--ok)':'var(--tr)'}">${ok?'✓ eşleşiyor':'✗ ters'}</td></tr>`}).join('')}
+const shapesEl=document.getElementById('shapes');shapes(false);
+tbtn.onclick=()=>{const on=tbtn.getAttribute('aria-pressed')!=='true';tbtn.setAttribute('aria-pressed',on);tbtn.textContent=on?'.T kaldır':'.T uygula';shapes(on)};
+
+// ---------- Görev 3
+const TR=[["Y","Y"],["ap","ap"],["ay","ay"],[" z","Ġz"],["ek","ek"],["â","Ã¢",1],[" ge","Ġge"],["le","le"],["ce","ce"],["k","k"],["te","te"],[" hay","Ġhay"],["at","at"],["ı","Ä±",1],["m","m"],["ı","Ä±",1],["z","z"],["ı","Ä±",1],[" de","Ġde"],["ğ","ÄŁ",1],["i","i"],["ş","ÅŁ",1],["t","t"],["ire","ire"],["ce","ce"],["k","k"],[".","."]];
+const EN=["Art","ificial"," intelligence"," will"," change"," our"," lives"," in"," the"," future","."];
+function chips(el,list){list.forEach(t=>{const s=document.createElement('span');const txt=Array.isArray(t)?t[0]:t;
+ s.className='chip'+(txt.startsWith(' ')?' sp':'')+(Array.isArray(t)&&t[2]?' byte':'');s.textContent=txt.trim();
+ s.title=Array.isArray(t)?'BPE: '+t[1]:'BPE: '+t.replace(' ','Ġ');el.appendChild(s)})}
+chips(trchips,TR);chips(enchips,EN);
+requestAnimationFrame(()=>{mtr.style.width='100%';men.style.width=(11/27*100)+'%'});
+
+// ---------- Görev 4
+const steps=[0,25,50,75,100,125,150,175,200,225,250,275];
+const A=[10.594226,.016554,.008787,.006751,.005687,.00495,.00441,.004022,.003641,.003344,.003061,.002837];
+const B=[407.997467,0,0,0,0,0,0,0,0,0,0,0];
+const svg=document.getElementById('chart'),W=640,H=260,L=56,R=16,Tp=14,Bt=34;
+const yLog=v=>{const lo=Math.log10(1e-3),hi=Math.log10(1e3);return Tp+(hi-Math.log10(Math.max(v,1e-3)))/(hi-lo)*(H-Tp-Bt)};
+const x=s=>L+s/275*(W-L-R);
+function draw(which){let g='';[1e-3,1e-2,1e-1,1,10,100,1000].forEach(v=>{const y=yLog(v);
+ g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-8}" y="${y+4}" text-anchor="end">${v>=1?v:v}</text>`});
+ [0,50,100,150,200,250].forEach(s=>g+=`<text x="${x(s)}" y="${H-12}" text-anchor="middle">${s}</text>`);
+ g+=`<line x1="${L}" x2="${W-R}" y1="${yLog(10.825)}" y2="${yLog(10.825)}" stroke="var(--tr)" stroke-dasharray="4 4"/><text x="${W-R}" y="${yLog(10.825)-6}" text-anchor="end" style="fill:var(--tr)">ln(50257)</text>`;
+ const d=which?B:A,col=which?'var(--tr)':'var(--accent)';
+ const pts=d.map((v,i)=>`${x(steps[i])},${yLog(v)}`).join(' ');
+ g+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5"/>`;
+ d.forEach((v,i)=>g+=`<circle cx="${x(steps[i])}" cy="${yLog(v)}" r="${i===0||i===d.length-1?4.5:3}" fill="${col}"><title>step ${steps[i]}: ${v}</title></circle>`);
+ svg.innerHTML=g;
+ cnote.textContent=which?'Başlangıç 407.99, step 25\'ten itibaren 0.000000 (grafikte 0.001 tabanına yapıştı). _init_weights uygulanmamıştı.':'Başlangıç 10.59, step 275\'te 0.0028. _init_weights ile, lr = 1e-4, 300 adım.'}
+draw(0);
+[b1,b2].forEach((b,i)=>b.onclick=()=>{b1.setAttribute('aria-pressed',i===0);b2.setAttribute('aria-pressed',i===1);draw(i)});
+</script>
+
+</body></html>
