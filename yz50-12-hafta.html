@@ -1,0 +1,197 @@
+<title>YZ50 On İki Hafta</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: kişisel bir yolculuk günlüğü; üstte 12 adımlık ilerleme şeridi, altında üç evrede haftalık notlar, sonda teşekkür kartı */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#15202b; --muted:#5a6876; --line:#d5dce3;
+  --accent:#1f6f8b; --accent-soft:#e1eef3; --warm:#1f6f8b; --warm-soft:#e1eef3;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161c; --surface:#16212a; --ink:#e6edf2; --muted:#93a3b1; --line:#2a3946;
+  --accent:#5cb3d1; --accent-soft:#1a3240; --warm:#5cb3d1; --warm-soft:#1a3240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161c; --surface:#16212a; --ink:#e6edf2; --muted:#93a3b1; --line:#2a3946;
+  --accent:#5cb3d1; --accent-soft:#1a3240; --warm:#5cb3d1; --warm-soft:#1a3240; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.65;
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));}
+.wrap{max-width:780px; margin:0 auto; padding-block:56px 80px; display:flex; flex-direction:column; gap:56px}
+h1,h2,h3{font-family:var(--display); text-wrap:balance; margin:0; line-height:1.12}
+p{margin:0}
+code{font-family:var(--mono); font-size:.86em; background:var(--accent-soft); padding:1px 5px; border-radius:4px}
+.tag{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent)}
+
+/* Hero */
+header{display:flex; flex-direction:column; gap:20px}
+.hi{font-size:18px; color:var(--muted)}
+header h1{font-size:clamp(36px, 7vw, 62px); font-weight:800; letter-spacing:-.02em}
+header h1 .from{color:var(--accent)}
+header h1 .to{color:var(--ink)}
+header .lead{max-width:60ch; font-size:18px}
+.strip{display:grid; grid-template-columns:repeat(12, 1fr); gap:6px; margin-top:8px}
+.strip a{display:grid; place-items:center; height:38px; border-radius:8px; text-decoration:none;
+  font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums;
+  background:var(--accent-soft); color:var(--accent); transition:transform .15s ease}
+.strip a:hover,.strip a:focus-visible{transform:translateY(-2px); outline:2px solid var(--accent); outline-offset:2px}
+.strip a.last{background:var(--warm); color:var(--surface)}
+.strip-cap{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); font-family:var(--mono)}
+
+/* Phases */
+.phase{display:flex; flex-direction:column; gap:22px}
+.phase-head{display:flex; flex-direction:column; gap:6px}
+.phase-head h2{font-size:30px; font-weight:700}
+.phase-head p{color:var(--muted)}
+
+ol.weeks{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px}
+.week{display:grid; grid-template-columns:52px 1fr; gap:18px; background:var(--surface); border:1px solid var(--line);
+  border-radius:14px; padding:20px; scroll-margin-top:20px}
+.num{font-family:var(--display); font-weight:800; font-size:34px; line-height:1; color:var(--accent); font-variant-numeric:tabular-nums}
+.body{min-width:0; display:flex; flex-direction:column; gap:10px}
+.body h3{font-size:21px; font-weight:700}
+.body p{max-width:64ch}
+.aside{font-size:15px; color:var(--muted); background:var(--bg); border-radius:10px; padding:10px 14px}
+.aside b{color:var(--ink); font-weight:600}
+.out{font-family:var(--mono); font-size:13px; color:var(--muted); overflow-wrap:anywhere}
+.out em{font-style:normal; color:var(--accent); font-weight:500}
+
+.week.final{border-color:var(--warm); box-shadow:0 0 0 3px var(--warm-soft)}
+.week.final .num{color:var(--warm)}
+.results{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:10px}
+.stat{background:var(--bg); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:2px}
+.stat .k{font-size:13px; color:var(--muted)}
+.stat .v{font-family:var(--display); font-size:22px; font-weight:700; font-variant-numeric:tabular-nums}
+.stat .v small{font-family:var(--body); font-size:13px; font-weight:500; color:var(--muted)}
+
+/* Thanks */
+.thanks{background:var(--accent); color:var(--surface); border-radius:18px; padding:32px 28px; display:flex; flex-direction:column; gap:12px}
+.thanks h2{font-size:clamp(26px, 5vw, 36px); font-weight:800}
+.thanks p{max-width:58ch; font-size:18px; opacity:.95}
+.thanks .sig{font-family:var(--display); font-weight:700; font-size:20px; margin-top:6px}
+:root[data-theme="dark"] .thanks, .thanks{}
+footer{color:var(--muted); font-size:14px; text-align:left}
+
+@media (max-width:520px){
+  .week{grid-template-columns:1fr; gap:6px; padding:18px}
+  .num{font-size:28px}
+  .strip{grid-template-columns:repeat(6, 1fr)}
+}
+@media (prefers-reduced-motion: reduce){ .strip a{transition:none} }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="tag">YZ50 · Neural Networks: Zero to Hero</span>
+    <h1>12 haftada <span class="from">tek bir nörondan</span> <span class="to">GPT-2'ye</span></h1>
+    <p class="lead">YZ50'ye başladığımda bir nöronun türevini elle hesaplıyordum. On iki hafta sonra kendi yazdığım GPT-2'yi gerçek bir veride eğitip OpenAI'ın modeliyle aynı testte karşılaştırdım. Bu sayfada her haftada neler yaptığımı kısaca anlatıyorum.</p>
+    <nav class="strip" aria-label="Haftalar">
+      <a href="#h1">1</a><a href="#h2">2</a><a href="#h3">3</a><a href="#h4">4</a><a href="#h5">5</a><a href="#h6">6</a>
+      <a href="#h7">7</a><a href="#h8">8</a><a href="#h9">9</a><a href="#h10">10</a><a href="#h11">11</a><a href="#h12" class="last">12</a>
+    </nav>
+    <div class="strip-cap"><span>1 nöron</span><span>124M parametre</span></div>
+  </header>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="tag">Hafta 1–3</span>
+      <h2>Önce temeller</h2>
+      <p>Hiç kütüphane kullanmadan, bir sinir ağının aslında nasıl öğrendiğini anlamaya çalıştım.</p>
+    </div>
+    <ol class="weeks">
+      <li class="week" id="h1"><div class="num">01</div><div class="body">
+        <h3>Nöron, loss ve gradient descent</h3>
+        <p>Tek bir nöronun forward pass'ini, sonra çok nöronlu bir katmanı yazdım. Basit bir loss fonksiyonu kurup parametre değiştikçe loss'un nasıl değiştiğini grafiğe döktüm. Sayısal türevle çalışan ilk gradient descent döngümü yazdım.</p>
+        <p class="out">(f(x+h) − f(x)) / h · her şey buradan başladı</p>
+      </div></li>
+      <li class="week" id="h2"><div class="num">02</div><div class="body">
+        <h3>Backpropagation'ı kendim yazdım</h3>
+        <p>Sayısal türevden zincir kuralına geçtim. Her işlemin kendi gradient'ini bildiği küçük bir autograd motoru yazıp bir ağı onunla eğittim.</p>
+      </div></li>
+      <li class="week" id="h3"><div class="num">03</div><div class="body">
+        <h3>İlk dil modelim: bigram</h3>
+        <p>İsim listesindeki harf çiftlerini sayarak isim üreten ilk modelimi kurdum. Aynı modeli tek katmanlı bir sinir ağı olarak da eğittim.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="tag">Hafta 4–6</span>
+      <h2>Modeller derinleşiyor</h2>
+      <p>Daha uzun bağlamlar ve derin ağları sağlıklı eğitmenin püf noktaları.</p>
+    </div>
+    <ol class="weeks">
+      <li class="week" id="h4"><div class="num">04</div><div class="body">
+        <h3>MLP, Kaiming init ve BatchNorm</h3>
+        <p>Bengio'nun 2003 makalesindeki gibi bir MLP kurdum: embedding tablosu, 3 harflik bağlam ve minibatch eğitim. Tanh'ın doygunluğa girdiğini histogramlarda görüp Kaiming init ve BatchNorm ile düzelttim. Modeli Türkçe isimlerle de eğittim.</p>
+        <p class="out">bağlam-3 MLP · dev loss <em>2,20</em></p>
+      </div></li>
+      <li class="week" id="h5"><div class="num">05</div><div class="body">
+        <h3>Backprop'u elle, tensör tensör</h3>
+        <p>Bir önceki haftanın modelinin bütün gradient'lerini <code>loss.backward()</code> kullanmadan elle yazdım ve her birini PyTorch'un sonucuyla karşılaştırdım. Hepsi eşleşene kadar uğraştım.</p>
+      </div></li>
+      <li class="week" id="h6"><div class="num">06</div><div class="body">
+        <h3>Kendi katmanlarım ve WaveNet</h3>
+        <p>Linear, BatchNorm1d, Embedding ve Sequential gibi katmanları kendim yazdım. Bağlamı 8 harfe çıkarıp harfleri ikişer ikişer birleştiren WaveNet mimarisini kurdum.</p>
+        <p class="aside"><b>Takıldığım yer:</b> BatchNorm 3 boyutlu girdide yanlış eksende ortalama alıyordu. Bulmak biraz sürdü ama çok şey öğretti.</p>
+        <p class="out">dev loss <em>2,20</em> → <em>2,05</em> → <em>1,99</em> (MLP → bağlam-8 → WaveNet)</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="tag">Hafta 7–12</span>
+      <h2>Transformer ve GPT-2</h2>
+      <p>Attention'dan başlayıp OpenAI'ın GPT-2'sini kendi kodumla yeniden kurmaya ve eğitmeye kadar.</p>
+    </div>
+    <ol class="weeks">
+      <li class="week" id="h7"><div class="num">07</div><div class="body">
+        <h3>Attention</h3>
+        <p>Token'ların birbirine bakmasını sağlayan self-attention'ı adım adım kurdum: query, key, value ve geleceği görmeyi engelleyen nedensel maske.</p>
+      </div></li>
+      <li class="week" id="h8"><div class="num">08</div><div class="body">
+        <h3>GPT'yi sıfırdan yazdım</h3>
+        <p>Multi-head attention, MLP, residual bağlantılar ve LayerNorm'u birleştirip karakter seviyesinde küçük bir GPT eğittim.</p>
+      </div></li>
+      <li class="week" id="h9"><div class="num">09</div><div class="body">
+        <h3>Tokenizer</h3>
+        <p>Byte Pair Encoding ile kendi tokenizer'ımı yazdım. Türkçe bir cümlenin İngilizce karşılığından neden çok daha fazla token'a bölündüğünü inceledim.</p>
+      </div></li>
+      <li class="week" id="h10"><div class="num">10</div><div class="body">
+        <h3>GPT-2'yi yeniden kurdum</h3>
+        <p>GPT-2 modülünü kendim yazıp OpenAI'ın 124M ağırlıklarını yükledim. Logit'lerin birebir eşleştiğini görmek haftanın en güzel anıydı. Top-k örneklemeyle İngilizce ve Türkçe metin ürettim.</p>
+        <p class="out">rastgele init ilk loss ≈ ln(50257) = <em>10,82</em></p>
+      </div></li>
+      <li class="week" id="h11"><div class="num">11</div><div class="body">
+        <h3>Eğitimi hızlandırdım</h3>
+        <p>Karışık hassasiyet, <code>torch.compile</code>, Flash Attention, 50304'lük sözlük, fused AdamW ve gradient accumulation'ı tek tek ekleyip her birinin hıza etkisini ölçtüm.</p>
+      </div></li>
+      <li class="week final" id="h12"><div class="num">12</div><div class="body">
+        <h3>Gerçek veride eğitim ve HellaSwag</h3>
+        <p>FineWeb-Edu'dan 55 milyon token hazırlayıp modeli Colab'ın T4 GPU'sunda yaklaşık 49 dakika eğittim. Model önce rastgele kelimeler üretiyordu, sonra düzgün cümleler kurmaya başladı. Sonunda kendi modelimi ve OpenAI'ın GPT-2'sini HellaSwag'de karşılaştırdım.</p>
+        <p class="aside"><b>Takıldığım yer:</b> Oturum birkaç kez çöktü, bir kez de verinin yarısını farkında olmadan atıyordum. Hepsini düzeltip eğitimi baştan koşturdum.</p>
+        <div class="results">
+          <div class="stat"><span class="k">Görülen token</span><span class="v">52,4M</span></div>
+          <div class="stat"><span class="k">Hız</span><span class="v">19.169 <small>tok/s</small></span></div>
+          <div class="stat"><span class="k">Val loss</span><span class="v">5,33 <small>/ OpenAI 3,39</small></span></div>
+          <div class="stat"><span class="k">HellaSwag (1.000 örnek)</span><span class="v">%27,0 <small>/ OpenAI %33,5</small></span></div>
+        </div>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="thanks">
+    <h2>Teşekkürler!</h2>
+    <p>YZ50 topluluğunun bir parçası olmak çok güzeldi. Her hafta aynı videoları izleyip aynı hatalarla uğraşan, pazar akşamları bir araya gelip neyi nasıl çözdüğümüzü konuştuğumuz bir ekip olduk.</p>
+    <p>Başta Yavuz ve Tunga hocam olmak üzere tüm Freya ekibine teşekkür ederim.</p>
+  </section>
+
+  <footer>Kaynak: Andrej Karpathy, “Neural Networks: Zero to Hero” serisi. Kodlar GitHub repomda hafta klasörlerinde.</footer>
+</div>
